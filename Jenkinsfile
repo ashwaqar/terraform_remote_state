@@ -67,8 +67,8 @@ pipeline {
             }
         }
         steps {
+            replaceTextInFile('backend.tf', 'local', 's3')
             sh """
-                replaceTextInFile('backend.tf', 'local', 's3')
                 terraform init \
                     -input=false \
                     -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
@@ -81,8 +81,8 @@ pipeline {
             stage("Init-Validate-Plan-Apply") {
                 steps {
                     script {
+                        replaceTextInFile('backend.tf', 'local', 's3')
                         sh """
-                            replaceTextInFile('backend.tf', 'local', 's3')
                             terraform init \
                                 -input=false \
                                 -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
