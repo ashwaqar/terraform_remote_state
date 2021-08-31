@@ -26,5 +26,7 @@ $terraform apply tfplan.out
 ### Known Issues
 
 To prevent accidental deletions of S3 buckets, `prevent_destroy` flag is set to `true`
+
 If you intend to delete the S3 buckets, change the value to `false` in `main.tf` manually
+
 *life cycle destroy for S3 cannot be controlled through an input parameter since the lifecycle block does not allow variables*
