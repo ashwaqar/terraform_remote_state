@@ -7,9 +7,7 @@ pipeline {
     disableConcurrentBuilds()
   }
 
-  agent {
-      any
-  }
+  agent any
 
   parameters{
     choice(
@@ -50,15 +48,17 @@ pipeline {
             }
         }
         steps {
-            sh "terraform init -input=false"
-            sh "terraform validate"
-            sh '''
-                terraform plan \
-                    -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                    -var 'env=${params.TARGET_ENVIRONMENT}'
-            '''
-            if (params.APPLY) {
-                sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
+            script {
+                sh '''
+                    terraform init -input=false
+                    terraform validate
+                    terraform plan \
+                        -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                        -var 'env=${params.TARGET_ENVIRONMENT}'
+                '''
+                if (params.APPLY) {
+                    sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
+                }
             }
         }
     }
@@ -81,22 +81,20 @@ pipeline {
         stages {
             stage("Init-Validate-Plan-Apply") {
                 steps {
-                    sh '''
-                        replaceTextInFile('backend.tf', 'local', 's3')
-                    '''
-                    sh '''
-                        terraform init \
-                            -input=false \
-                            -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
-                    '''
-                    sh "terraform validate"
-                    sh '''
-                        terraform plan \
-                            -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                            -var 'env=${params.TARGET_ENVIRONMENT}'
-                    '''
-                    if (params.APPLY) {
-                        sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
+                    script {
+                        sh '''
+                            replaceTextInFile('backend.tf', 'local', 's3')
+                            terraform init \
+                                -input=false \
+                                -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
+                            terraform validate
+                            terraform plan \
+                                -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                                -var 'env=${params.TARGET_ENVIRONMENT}'
+                        '''
+                        if (params.APPLY) {
+                            sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
+                        }
                     }
                 }
             }
