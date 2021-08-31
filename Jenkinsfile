@@ -65,7 +65,7 @@ pipeline {
                 }
             }
         }
-        stage ("Init reconfigure against S3 backend") {
+        stage ("Migrate state to S3 backend") {
             when {
                 expression {
                     params.BOOTSTRAP == true
@@ -77,42 +77,38 @@ pipeline {
                     terraform init \
                         -input=false \
                         -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
-                        -reconfigure
+                        -migrate-state \
+                        -force-copy
                 """
             }
         }
-        stage("Init-Validate-Plan-Apply against S3 backend"){
-            stages {
-                stage("Init-Validate-Plan-Apply") {
-                    steps {
-                        script {
-                            replaceTextInFile('backend.tf', 'local', 's3')
-                            sh """
-                                terraform init \
-                                    -input=false \
-                                    -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
-                                terraform validate
-                                terraform plan \
-                                    -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                                    -var 'env=${params.TARGET_ENVIRONMENT}'
-                            """
-                            if (params.APPLY) {
-                                sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
-                            }
-                        }
+        stage("Init-Validate-Plan-Apply against S3 backend") {
+            steps {
+                script {
+                    replaceTextInFile('backend.tf', 'local', 's3')
+                    sh """
+                        terraform init \
+                            -input=false \
+                            -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
+                        terraform validate
+                        terraform plan \
+                            -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                            -var 'env=${params.TARGET_ENVIRONMENT}'
+                    """
+                    if (params.APPLY) {
+                        sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
                     }
                 }
-                stage("Terraform destroy") {
-                    when {
-                        expression {
-                            (params.DESTROY == true)
-                        }
-                    }
-                    steps {
-                        sh "terraform destroy -var 'env=${params.TARGET_ENVIRONMENT}' -auto-approve"
-                    }
+            }
+        }
+        stage("Terraform destroy") {
+            when {
+                expression {
+                    (params.DESTROY == true)
                 }
-
+            }
+            steps {
+                sh "terraform destroy -var 'env=${params.TARGET_ENVIRONMENT}' -auto-approve"
             }
         }
     }
