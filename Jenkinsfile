@@ -119,7 +119,7 @@ pipeline {
 }
 
 void replaceTextInFile(String filepath, String sourceText, String newText) {
-    def oldContent = readFile filepath
+    def oldContent = readFile(file: filepath)
     def newContent = oldContent.replaceAll(sourceText, newText)
-    writeFile(filepath, newContent)
+    writeFile(file: filepath, text: newContent)
 }
