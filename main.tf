@@ -18,7 +18,7 @@ locals {
 data "aws_iam_account_alias" "current" {}
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "terraform-aws-gh-screening-eks-state-${local.account_id}-${var.env}"
+  bucket = "terraform-aws-gh-screening-state-${local.account_id}-${var.env}"
 
   # Enable versioning so we can see the 
   # full revision history of our state files
@@ -55,7 +55,7 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
 }
 
 resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "terraform-aws-gh-screening-eks-locks-${local.account_id}-${var.env}"
+  name         = "terraform-aws-gh-screening-locks-${local.account_id}-${var.env}"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
 
