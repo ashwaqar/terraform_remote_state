@@ -1,4 +1,4 @@
-### bootstrap phase is performed only once to configure remote-state backend
+## Following instructions are for local setup. Jenkinsfile automates this process
 
 __setup the AWS session using CLI__
 ```
@@ -8,7 +8,7 @@ __export the environment variables__
 ```
 $export AWS_PROFILE=lunar2-non-production-admin AWS_DEFAULT_REGION=us-west-2  AWS_SDK_LOAD_CONFIG=1
 ```
-__run locally from a developer’s workstation on the first execution. This provisions the cloud resources terraform requires for remote state management__
+__bootstrap phase is performed only once to configure remote-state backend. This provisions the cloud resources terraform requires for remote state management__
 ```
 $terraform init
 $terraform validate
