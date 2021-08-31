@@ -111,7 +111,6 @@ pipeline {
 
         }
     }
-  }
 }
 
 void replaceTextInFile(String filepath, String sourceText, String newText) {
