@@ -57,7 +57,6 @@ pipeline {
                         -var 'env=${params.TARGET_ENVIRONMENT}'
                     terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
                 '''
-                }
             }
         }
     }
@@ -111,6 +110,7 @@ pipeline {
 
         }
     }
+  }
 }
 
 void replaceTextInFile(String filepath, String sourceText, String newText) {
