@@ -49,14 +49,14 @@ pipeline {
         }
         steps {
             script {
-                sh '''
+                sh """
                     terraform init -input=false
                     terraform validate
                     terraform plan \
                         -out=${params.TARGET_ENVIRONMENT}_tfplan \
                         -var 'env=${params.TARGET_ENVIRONMENT}'
                     terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
-                '''
+                """
             }
         }
     }
@@ -67,13 +67,13 @@ pipeline {
             }
         }
         steps {
-            sh '''
+            sh """
                 replaceTextInFile('backend.tf', 'local', 's3')
                 terraform init \
                     -input=false \
                     -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
                     -reconfigure
-            '''
+            """
         }
     }
     stage("Init-Validate-Plan-Apply against S3 backend"){
@@ -81,7 +81,7 @@ pipeline {
             stage("Init-Validate-Plan-Apply") {
                 steps {
                     script {
-                        sh '''
+                        sh """
                             replaceTextInFile('backend.tf', 'local', 's3')
                             terraform init \
                                 -input=false \
@@ -90,7 +90,7 @@ pipeline {
                             terraform plan \
                                 -out=${params.TARGET_ENVIRONMENT}_tfplan \
                                 -var 'env=${params.TARGET_ENVIRONMENT}'
-                        '''
+                        """
                         if (params.APPLY) {
                             sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
                         }
