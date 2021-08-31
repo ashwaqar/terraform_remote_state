@@ -23,12 +23,12 @@ pipeline {
     booleanParam(
         name: 'APPLY',
         defaultValue: false,
-        description: 'The infra will be applied to the chosen workspace.'
+        description: 'The infra will be applied to the chosen environment.'
     )
     booleanParam(
         name: 'DESTROY',
         defaultValue: false,
-        description: 'The infra will be destroyed in the chosen workspace.'
+        description: 'The infra will be destroyed in the chosen environment.'
     )
   }
 
