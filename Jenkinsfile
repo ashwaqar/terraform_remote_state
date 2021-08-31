@@ -34,8 +34,8 @@ pipeline {
 
   environment {
     TF_AWS_ACCOUNT          = 'lunar2-non-production'
-    AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_ACCESS_KEY")
-    AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_SECRET_KEY")
+    AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
+    AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
     TF_DIR                  = './'
     SEND_SLACK_NOTIFICATION = false
   }
@@ -55,9 +55,8 @@ pipeline {
                     terraform plan \
                         -out=${params.TARGET_ENVIRONMENT}_tfplan \
                         -var 'env=${params.TARGET_ENVIRONMENT}'
+                    terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
                 '''
-                if (params.APPLY) {
-                    sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
                 }
             }
         }
@@ -70,6 +69,7 @@ pipeline {
         }
         steps {
             sh '''
+                replaceTextInFile('backend.tf', 'local', 's3')
                 terraform init \
                     -input=false \
                     -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
