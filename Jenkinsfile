@@ -38,75 +38,81 @@ pipeline {
     }
 
     environment {
-        TF_AWS_ACCOUNT          = "${ (params.TARGET_ENVIRONMENT in ['prod']) ? 'lunar2-production' : 'lunar2-non-production' }"
-        AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
-        AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
+        TF_AWS_ACCOUNT  = "${ (params.TARGET_ENVIRONMENT in ['prod']) ? 'lunar2-production' : 'lunar2-non-production' }"
     }
 
     stages {
-        stage("Init-Validate-Plan-Apply against local backend"){
-            when {
-                expression {
-                    params.BOOTSTRAP == true
-                }
+        stage("Define Environment Variables"){
+            environment {
+                AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
+                AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
             }
-            steps {
-                script {
-                    sh """
-                        terraform init -input=false
-                        terraform validate
-                        terraform plan \
-                            -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                            -var 'env=${params.TARGET_ENVIRONMENT}'
-                        terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
-                    """
-                }
-            }
-        }
-        stage ("Migrate state to S3 backend") {
-            when {
-                expression {
-                    params.BOOTSTRAP == true
-                }
-            }
-            steps {
-                replaceTextInFile('backend.tf', 'local', 's3')
-                sh """
-                    terraform init \
-                        -input=false \
-                        -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
-                        -migrate-state \
-                        -force-copy
-                """
-            }
-        }
-        stage("Init-Validate-Plan-Apply against S3 backend") {
-            steps {
-                script {
-                    replaceTextInFile('backend.tf', 'local', 's3')
-                    sh """
-                        terraform init \
-                            -input=false \
-                            -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
-                        terraform validate
-                        terraform plan \
-                            -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                            -var 'env=${params.TARGET_ENVIRONMENT}'
-                    """
-                    if (params.APPLY) {
-                        sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
+            stages {
+                stage("Init-Validate-Plan-Apply against local backend"){
+                    when {
+                        expression {
+                            params.BOOTSTRAP == true
+                        }
+                    }
+                    steps {
+                        script {
+                            sh """
+                                terraform init -input=false
+                                terraform validate
+                                terraform plan \
+                                    -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                                    -var 'env=${params.TARGET_ENVIRONMENT}'
+                                terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
+                            """
+                        }
                     }
                 }
-            }
-        }
-        stage("Terraform destroy") {
-            when {
-                expression {
-                    (params.DESTROY == true)
+                stage ("Migrate state to S3 backend") {
+                    when {
+                        expression {
+                            params.BOOTSTRAP == true
+                        }
+                    }
+                    steps {
+                        replaceTextInFile('backend.tf', 'local', 's3')
+                        sh """
+                            terraform init \
+                                -input=false \
+                                -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
+                                -migrate-state \
+                                -force-copy
+                        """
+                    }
                 }
-            }
-            steps {
-                sh "terraform destroy -var 'env=${params.TARGET_ENVIRONMENT}' -auto-approve"
+                stage("Init-Validate-Plan-Apply against S3 backend") {
+                    steps {
+                        script {
+                            replaceTextInFile('backend.tf', 'local', 's3')
+                            sh """
+                                terraform init \
+                                    -input=false \
+                                    -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
+                                terraform validate
+                                terraform plan \
+                                    -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                                    -var 'env=${params.TARGET_ENVIRONMENT}'
+                            """
+                            if (params.APPLY) {
+                                sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
+                            }
+                        }
+                    }
+                }
+                stage("Terraform destroy") {
+                    when {
+                        expression {
+                            (params.DESTROY == true)
+                        }
+                    }
+                    steps {
+                        sh "terraform destroy -var 'env=${params.TARGET_ENVIRONMENT}' -auto-approve"
+                    }
+                }
             }
         }
     }
