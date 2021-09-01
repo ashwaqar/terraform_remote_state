@@ -38,7 +38,7 @@ pipeline {
     }
 
     environment {
-        TF_AWS_ACCOUNT          = '${ (params.TARGET_ENVIRONMENT in ['prod']) ? 'lunar2-production' : 'lunar2-non-production' }"'
+        TF_AWS_ACCOUNT          = "${ (params.TARGET_ENVIRONMENT in ['prod']) ? 'lunar2-production' : 'lunar2-non-production' }"
         AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
         AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
     }
