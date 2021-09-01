@@ -15,11 +15,6 @@ pipeline {
     }
 
     parameters{
-        choice(
-            name: 'TARGET_ENVIRONMENT',
-            choices: ['sandbox','dev','sqa','val','staging','prod'],
-            description: 'Infra deployment environment'
-        )
         booleanParam(
             name: 'BOOTSTRAP',
             defaultValue: false,
@@ -34,6 +29,11 @@ pipeline {
             name: 'DESTROY',
             defaultValue: false,
             description: 'The infra will be destroyed in the chosen environment.'
+        )
+        choice(
+            name: 'TARGET_ENVIRONMENT',
+            choices: ['sandbox','dev','sqa','val','staging','prod'],
+            description: 'Infra deployment environment'
         )
     }
 
