@@ -21,6 +21,11 @@ pipeline {
             description: 'Infra deployment environment'
         )
         booleanParam(
+            name: 'BOOTSTRAP',
+            defaultValue: false,
+            description: 'Are you creating remote S3 and DynamoDB backend first time'
+        )
+        booleanParam(
             name: 'APPLY',
             defaultValue: false,
             description: 'The infra will be applied to the chosen environment.'
@@ -32,79 +37,76 @@ pipeline {
         )
     }
 
+    environment {
+        TF_AWS_ACCOUNT          = "${ (params.TARGET_ENVIRONMENT in ['prod']) ? 'lunar2-production' : 'lunar2-non-production' }"
+        AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
+        AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
+    }
+
     stages {
-        stage("Define Environment Variables"){
-            environment {
-                TF_AWS_ACCOUNT          = "${(params.TARGET_ENVIRONMENT == 'prod') ? 'lunar2-production' : 'lunar2-non-production'}"
-                AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
-                AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
+        stage("Init-Validate-Plan-Apply against local backend"){
+            when {
+                expression {
+                    params.BOOTSTRAP == true
+                }
             }
-            stages {
-                stage("Init-Validate-Plan-Apply against local backend"){
-                    when {
-                        expression {
-                            params.BOOTSTRAP == true
-                        }
-                    }
-                    steps {
-                        script {
-                            sh """
-                                terraform init -input=false
-                                terraform validate
-                                terraform plan \
-                                    -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                                    -var 'env=${params.TARGET_ENVIRONMENT}'
-                                terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
-                            """
-                        }
+            steps {
+                script {
+                    sh """
+                        terraform init -input=false
+                        terraform validate
+                        terraform plan \
+                            -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                            -var 'env=${params.TARGET_ENVIRONMENT}'
+                        terraform apply ${params.TARGET_ENVIRONMENT}_tfplan
+                    """
+                }
+            }
+        }
+        stage ("Migrate state to S3 backend") {
+            when {
+                expression {
+                    params.BOOTSTRAP == true
+                }
+            }
+            steps {
+                replaceTextInFile('backend.tf', 'local', 's3')
+                sh """
+                    terraform init \
+                        -input=false \
+                        -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
+                        -migrate-state \
+                        -force-copy
+                """
+            }
+        }
+        stage("Init-Validate-Plan-Apply against S3 backend") {
+            steps {
+                script {
+                    replaceTextInFile('backend.tf', 'local', 's3')
+                    sh """
+                        terraform init \
+                            -input=false \
+                            -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
+                        terraform validate
+                        terraform plan \
+                            -out=${params.TARGET_ENVIRONMENT}_tfplan \
+                            -var 'env=${params.TARGET_ENVIRONMENT}'
+                    """
+                    if (params.APPLY) {
+                        sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
                     }
                 }
-                stage ("Migrate state to S3 backend") {
-                    when {
-                        expression {
-                            params.BOOTSTRAP == true
-                        }
-                    }
-                    steps {
-                        replaceTextInFile('backend.tf', 'local', 's3')
-                        sh """
-                            terraform init \
-                                -input=false \
-                                -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties \
-                                -migrate-state \
-                                -force-copy
-                        """
-                    }
+            }
+        }
+        stage("Terraform destroy") {
+            when {
+                expression {
+                    (params.DESTROY == true)
                 }
-                stage("Init-Validate-Plan-Apply against S3 backend") {
-                    steps {
-                        script {
-                            replaceTextInFile('backend.tf', 'local', 's3')
-                            sh """
-                                terraform init \
-                                    -input=false \
-                                    -backend-config=environments/${params.TARGET_ENVIRONMENT}/remote-backend.properties
-                                terraform validate
-                                terraform plan \
-                                    -out=${params.TARGET_ENVIRONMENT}_tfplan \
-                                    -var 'env=${params.TARGET_ENVIRONMENT}'
-                            """
-                            if (params.APPLY) {
-                                sh "terraform apply ${params.TARGET_ENVIRONMENT}_tfplan"
-                            }
-                        }
-                    }
-                }
-                stage("Terraform destroy") {
-                    when {
-                        expression {
-                            (params.DESTROY == true)
-                        }
-                    }
-                    steps {
-                        sh "terraform destroy -var 'env=${params.TARGET_ENVIRONMENT}' -auto-approve"
-                    }
-                }
+            }
+            steps {
+                sh "terraform destroy -var 'env=${params.TARGET_ENVIRONMENT}' -auto-approve"
             }
         }
     }
