@@ -35,7 +35,7 @@ pipeline {
     stages {
         stage("Define Environment Variables"){
             environment {
-                TF_AWS_ACCOUNT          = (params.TARGET_ENVIRONMENT == 'prod') ? 'lunar2-production' : 'lunar2-non-production'
+                TF_AWS_ACCOUNT          = "${(params.TARGET_ENVIRONMENT == 'prod') ? 'lunar2-production' : 'lunar2-non-production'}"
                 AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
                 AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
             }
