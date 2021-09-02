@@ -14,7 +14,7 @@ pipeline {
         }
     }
 
-    parameters{
+    parameters {
         booleanParam(
             name: 'BOOTSTRAP',
             defaultValue: false,
@@ -42,7 +42,7 @@ pipeline {
     }
 
     stages {
-        stage("Define Environment Variables"){
+        stage("Define Environment Variables") {
             environment {
                 AWS_ACCESS_KEY_ID       = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_ACCESS_KEY")
                 AWS_SECRET_ACCESS_KEY   = credentials("${env.TF_AWS_ACCOUNT}_TERRAFORM_SECRET_KEY")
